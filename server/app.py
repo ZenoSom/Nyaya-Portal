@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import os
 from typing import Any
 from uuid import uuid4
 
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
+import uvicorn
 
 
 class ResetResponse(BaseModel):
@@ -77,3 +79,12 @@ def state() -> StateResponse:
         step_count=_step_count,
         status="running",
     )
+
+
+def main() -> None:
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run("server.app:app", host="0.0.0.0", port=port)
+
+
+if __name__ == "__main__":
+    main()
