@@ -66,6 +66,16 @@ async function startServer() {
     });
   });
 
+  // Some hosting flows may probe or post to /reset. This app is stateless,
+  // so the safest behavior is to send the user back to the main UI.
+  app.get("/reset", (_req, res) => {
+    res.redirect("/");
+  });
+
+  app.post("/reset", (_req, res) => {
+    res.redirect(303, "/");
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
