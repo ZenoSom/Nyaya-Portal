@@ -1,8 +1,5 @@
 ---
 title: Nyayal P
-emoji: 🏃
-colorFrom: yellow
-colorTo: purple
 sdk: docker
 pinned: false
 short_description: ' Legal Case Management & AI Scheduling System'
