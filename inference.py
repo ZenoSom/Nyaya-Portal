@@ -57,9 +57,9 @@ except ImportError:
         def __init__(self, *, base_url: str, api_key: str) -> None:
             self.chat = _Chat(base_url=base_url, api_key=api_key)
 
-API_BASE_URL = os.environ["API_BASE_URL"]
-API_KEY = os.environ["API_KEY"]
-MODEL_NAME = os.environ["MODEL_NAME"]
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+HF_TOKEN = os.getenv("HF_TOKEN")
 TASK_NAME = os.getenv("NYAYA_TASK", "nyaya_portal_baseline")
 BENCHMARK = os.getenv("NYAYA_BENCHMARK", "nyaya_portal")
 
@@ -85,7 +85,7 @@ def _safe_action(action: str) -> str:
 
 
 def call_llm() -> str:
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
     try:
         response = client.chat.completions.create(
             model=MODEL_NAME,
