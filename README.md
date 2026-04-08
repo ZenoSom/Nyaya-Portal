@@ -2,136 +2,100 @@
 title: Nyayal P
 sdk: docker
 pinned: false
-short_description: ' Legal Case Management & AI Scheduling System'
+short_description: Court case triage OpenEnv environment
 ---
 
-# Nyaya Portal — Legal Case Management & AI Scheduling System
+# Nyaya Portal OpenEnv Environment
 
-## Overview
+Nyaya Portal is a courtroom triage environment for the OpenEnv hackathon. An agent receives a small docket of real-world-style court cases and must choose which matter should be escalated next.
 
-Nyaya Portal is a Legal Case Management and AI Scheduling System designed to streamline judicial workflows using data analytics and intelligent scheduling logic.
+## Environment Summary
 
-The platform enables efficient case management, backlog analysis, and automated hearing scheduling to improve decision-making within court systems.
+- Domain: judicial backlog triage
+- Runtime: FastAPI
+- Core endpoints: `/reset`, `/step`, `/state`, `/tasks`
+- Objective: choose the correct `case_id` and urgency level for each task
 
----
+## Task Set
 
-## Features and Modules
+The environment exposes three deterministic tasks:
 
-### 1. Strategic Dashboard
+1. `easy_case_lookup`
+   Find the oldest pending property matter.
+2. `medium_backlog_triage`
+   Prioritize the most urgent criminal backlog.
+3. `hard_cross_docket_review`
+   Select the strongest escalation candidate across a mixed docket.
 
-The dashboard serves as the central command interface, providing high-level insights into the judicial system.
+Each task returns:
 
-**Key Metrics:**
-- Total Cases  
-- High Severity Alerts  
-- Average Pending Days  
-- Active Courtrooms  
+- a task description
+- a visible subset of case records
+- deterministic grading through the `step()` call
 
-**Visual Analytics:**
-- Case Distribution (Pie Chart): Breakdown of cases by type such as Criminal, Civil, and Property  
-- Severity Analysis (Bar Chart): Comparison of low, medium, and high severity cases  
-- Backlog Trends (Area Chart): Timeline analysis of case filings to identify workload patterns  
+## Action Space
 
----
+The agent submits a JSON action object to `/step`:
 
-### 2. Case Intelligence Lookup
+```json
+{
+  "case_id": 8,
+  "priority": "urgent"
+}
+```
 
-A search interface for retrieving case information quickly and efficiently.
+## Observation Space
 
-**Features:**
-- Live Search by petitioner or respondent name  
-- Case selection with detailed information display  
-- AI Schedule Generator:
-  - Analyzes pending days and severity  
-  - Predicts hearing date and time  
-  - Assigns courtroom number and priority level  
+`/reset` and `/step` return observations with:
 
-**AI Reasoning:**
-- Provides justification for decisions  
-- Example: "High priority due to extended backlog duration"  
+- `episode_id`
+- `task`
+- `cases`
+- `step_count`
+- `last_action_error`
+- `score`
 
----
+## Reward Logic
 
-### 3. Central Repository
+Rewards are normalized to `[0.0, 1.0]`.
 
-A structured database containing all case records.
+- `0.75` for choosing the correct `case_id`
+- partial credit for selecting a near-correct severe / long-pending case
+- `0.25` for setting the expected urgency correctly
 
-**Features:**
-- Complete case details including:
-  - Case ID  
-  - Judge Name  
-  - Court Location  
-  - Filing Date  
+The episode ends after one grading step, which keeps validation deterministic and reproducible.
 
-- Status Tracking:
-  - Pending  
-  - Ongoing  
-  - Closed  
+## Inference Script
 
-- Severity Indicators:
-  - High  
-  - Medium  
-  - Low  
+The root `inference.py`:
 
----
+- emits strict `[START]`, `[STEP]`, `[END]` stdout lines
+- makes an OpenAI-compatible chat completion request through the injected proxy variables
+- remains self-contained even if the external `openai` package is unavailable
 
-### 4. Courtroom Monitor
+## Local Run
 
-A dedicated module for managing courtroom operations.
-
-**Features:**
-- Live courtroom activity status  
-- Judge assignment tracking  
-- Daily hearing schedules  
-
----
-
-## Technical Highlights
-
-- **AI Integration:**  
-  Uses a scheduling logic engine compatible with Gemini API to automate decision-making  
-
-- **Responsive Design:**  
-  Desktop-first layout with adaptive responsiveness  
-
-- **Real-Time Interaction:**  
-  Dynamic updates without page reloads  
-
-- **Modern UI:**  
-  Built with React or Next.js, styled using Tailwind CSS, with smooth transitions  
-
----
-
-## How to Run Locally
+Install frontend dependencies:
 
 ```bash
 npm install
+```
+
+Run the web app:
+
+```bash
 npm run dev
 ```
 
-Open in browser:  
-http://localhost:3000
+Run the OpenEnv FastAPI server locally:
 
----
+```bash
+python3 -m server.app
+```
 
-## Use Cases
+## Files
 
-- Judicial backlog analysis  
-- Case prioritization  
-- Courtroom scheduling optimization  
-- Legal data visualization  
-
----
-
-## Project Highlights
-
-- Focus on real-world judicial challenges  
-- Data-driven scheduling decisions  
-- Clean and professional user interface  
-- Scalable and modular architecture  
-
----
-
-## Author
-
-Somnath Singh
+- `server/app.py`: OpenEnv-compatible environment server
+- `openenv.yaml`: environment entrypoint definition
+- `inference.py`: baseline validator script
+- `Dockerfile`: Space container build
