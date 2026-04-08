@@ -70,8 +70,15 @@ The episode ends after one grading step, which keeps validation deterministic an
 The root `inference.py`:
 
 - emits strict `[START]`, `[STEP]`, `[END]` stdout lines
-- makes an OpenAI-compatible chat completion request through the injected proxy variables
+- makes an OpenAI-compatible `/v1/chat/completions` request through the injected proxy variables
 - remains self-contained even if the external `openai` package is unavailable
+
+Required proxy/runtime variables:
+
+- `API_BASE_URL`: LiteLLM or OpenAI-compatible proxy base URL
+- `API_KEY`: proxy API key
+- `MODEL_NAME`: model identifier exposed by the proxy
+- `ENV_BASE_URL`: base URL for the running FastAPI environment
 
 ## Local Run
 
@@ -91,6 +98,16 @@ Run the OpenEnv FastAPI server locally:
 
 ```bash
 python3 -m server.app
+```
+
+Run the inference script against an OpenAI-compatible proxy:
+
+```bash
+API_BASE_URL="https://your-proxy.example/v1" \
+API_KEY="your-proxy-key" \
+MODEL_NAME="your-model" \
+ENV_BASE_URL="http://localhost:8000" \
+python3 inference.py
 ```
 
 ## Files

@@ -58,8 +58,9 @@ except ImportError:
             self.chat = _Chat(base_url=base_url, api_key=api_key)
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+API_KEY = os.getenv("API_KEY")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-HF_TOKEN = os.getenv("HF_TOKEN")
+ENV_BASE_URL = os.getenv("ENV_BASE_URL", "http://localhost:8000")
 TASK_NAME = os.getenv("NYAYA_TASK", "nyaya_portal_baseline")
 BENCHMARK = os.getenv("NYAYA_BENCHMARK", "nyaya_portal")
 
@@ -85,18 +86,24 @@ def _safe_action(action: str) -> str:
 
 
 def call_llm() -> str:
-    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
     try:
         response = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
                 {
                     "role": "system",
-                    "content": "You are evaluating a court case lookup environment baseline.",
+                    "content": (
+                        "You are evaluating a court case lookup environment baseline through an "
+                        "OpenAI-compatible LiteLLM proxy."
+                    ),
                 },
                 {
                     "role": "user",
-                    "content": "Return a one sentence baseline assessment for Nyaya Portal.",
+                    "content": (
+                        "Return a one sentence baseline assessment for Nyaya Portal. "
+                        f"The environment base URL is {ENV_BASE_URL}."
+                    ),
                 },
             ],
             max_tokens=32,
