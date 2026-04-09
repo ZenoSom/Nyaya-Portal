@@ -1,5 +1,25 @@
 {
   "name": "Nyaya Portal — Court Case Lookup System",
   "description": "A professional court case information system for looking up case details and generating AI-powered hearing schedules.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "tasks": [
+    {
+      "id": "easy_case_lookup",
+      "input": "Find the oldest pending property matter.",
+      "expected output": "8",
+      "grader logic": "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2"
+    },
+    {
+      "id": "medium_backlog_triage",
+      "input": "Prioritize the most urgent criminal backlog.",
+      "expected output": "20",
+      "grader logic": "def grade(output, expected_output):\n    return 0.75 if str(output).strip() == str(expected_output).strip() else 0.25"
+    },
+    {
+      "id": "hard_cross_docket_review",
+      "input": "Select the strongest cross-docket escalation candidate.",
+      "expected output": "20",
+      "grader logic": "def grade(output, expected_output):\n    return 0.9 if str(output).strip() == str(expected_output).strip() else 0.1"
+    }
+  ]
 }
