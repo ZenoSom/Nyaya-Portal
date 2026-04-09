@@ -1,0 +1,28 @@
+tasks:
+  - id: easy_case_lookup
+    name: "Oldest Pending Property Matter"
+    difficulty: easy
+    score: 0.25
+    input: "Find the oldest pending property matter."
+    expected_output: "8"
+    graders:
+      - grader_type: python
+        grader_logic: "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2"
+  - id: medium_backlog_triage
+    name: "Most Urgent Criminal Backlog"
+    difficulty: medium
+    score: 0.35
+    input: "Prioritize the most urgent criminal backlog."
+    expected_output: "20"
+    graders:
+      - grader_type: python
+        grader_logic: "def grade(output, expected_output):\n    return 0.75 if str(output).strip() == str(expected_output).strip() else 0.25"
+  - id: hard_cross_docket_review
+    name: "Strongest Cross-Docket Escalation Candidate"
+    difficulty: hard
+    score: 0.45
+    input: "Select the strongest cross-docket escalation candidate."
+    expected_output: "20"
+    graders:
+      - grader_type: python
+        grader_logic: "def grade(output, expected_output):\n    return 0.9 if str(output).strip() == str(expected_output).strip() else 0.1"
