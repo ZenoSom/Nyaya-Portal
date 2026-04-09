@@ -52,12 +52,9 @@ TASKS: tuple[TaskSpec, ...] = (
     TaskSpec(
         task_id="easy_case_lookup",
         difficulty="easy",
-        score=0.2,
+        score=0.25,
         title="Find the oldest pending property matter",
-        description=(
-            "Identify the property case with the highest pending_days value among the visible cases. "
-            "Return the selected case_id and set priority to urgent."
-        ),
+        description="Find the oldest pending property matter.",
         success_case_id=8,
         expected_priority="urgent",
         success_reason="Meera Iyer's property dispute has the highest property backlog in the visible docket.",
@@ -68,10 +65,7 @@ TASKS: tuple[TaskSpec, ...] = (
         difficulty="medium",
         score=0.35,
         title="Prioritize the most urgent criminal backlog",
-        description=(
-            "Choose the criminal case that should be scheduled next. Consider severity and pending_days. "
-            "Return case_id and priority."
-        ),
+        description="Prioritize the most urgent criminal backlog.",
         success_case_id=20,
         expected_priority="urgent",
         success_reason="Ananya Panday's criminal case has the highest pending_days among severe criminal matters.",
@@ -82,10 +76,7 @@ TASKS: tuple[TaskSpec, ...] = (
         difficulty="hard",
         score=0.45,
         title="Select the strongest cross-docket escalation candidate",
-        description=(
-            "Review the mixed docket and escalate the matter that combines high severity with the longest delay, "
-            "then provide case_id and priority."
-        ),
+        description="Select the strongest cross-docket escalation candidate.",
         success_case_id=20,
         expected_priority="urgent",
         success_reason="Ananya Panday remains the strongest escalation candidate even across the wider mixed docket.",

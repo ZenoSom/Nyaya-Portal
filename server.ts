@@ -21,7 +21,7 @@ async function startServer() {
       difficulty: "easy",
       score: 0.25,
       title: "Find the oldest pending property matter",
-      description: "Identify the property case with the highest pending_days value among the visible cases Rahul Sharma, Anjali Gupta, Meera Iyer, and Arjun Kapoor. Return the selected case_id and set priority to urgent.",
+      description: "Find the oldest pending property matter.",
       success_case_id: 8,
       expected_priority: "urgent"
     },
@@ -30,7 +30,7 @@ async function startServer() {
       difficulty: "medium",
       score: 0.35,
       title: "Prioritize the most urgent criminal backlog",
-      description: "Choose the criminal case that should be scheduled next from the docket containing Rahul Sharma, Vikram Malhotra, Alia Bhatt, and Ananya Panday. Consider severity and pending_days. Return case_id and priority.",
+      description: "Prioritize the most urgent criminal backlog.",
       success_case_id: 20,
       expected_priority: "urgent"
     },
@@ -39,7 +39,7 @@ async function startServer() {
       difficulty: "hard",
       score: 0.45,
       title: "Select the strongest cross-docket escalation candidate",
-      description: "Review the mixed docket (Anjali Gupta, Vikram Malhotra, Meera Iyer, Alia Bhatt, Ananya Panday, Vicky Kaushal) and escalate the matter that combines high severity with the longest delay. Provide case_id and priority.",
+      description: "Select the strongest cross-docket escalation candidate.",
       success_case_id: 20,
       expected_priority: "urgent"
     }
