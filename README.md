@@ -3,34 +3,6 @@ title: Nyaya Portal
 sdk: docker
 pinned: false
 short_description: Court case triage OpenEnv environment
-tasks:
-  - id: easy_case_lookup
-    input: "Find the oldest pending property matter."
-    expected_output: "8"
-    grader_logic: "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2"
-    graders:
-      - grader_type: python
-        input: "Find the oldest pending property matter."
-        expected_output: "8"
-        grader_logic: "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2"
-  - id: medium_backlog_triage
-    input: "Prioritize the most urgent criminal backlog."
-    expected_output: "20"
-    grader_logic: "def grade(output, expected_output):\n    return 0.75 if str(output).strip() == str(expected_output).strip() else 0.25"
-    graders:
-      - grader_type: python
-        input: "Prioritize the most urgent criminal backlog."
-        expected_output: "20"
-        grader_logic: "def grade(output, expected_output):\n    return 0.75 if str(output).strip() == str(expected_output).strip() else 0.25"
-  - id: hard_cross_docket_review
-    input: "Select the strongest cross-docket escalation candidate."
-    expected_output: "20"
-    grader_logic: "def grade(output, expected_output):\n    return 0.9 if str(output).strip() == str(expected_output).strip() else 0.1"
-    graders:
-      - grader_type: python
-        input: "Select the strongest cross-docket escalation candidate."
-        expected_output: "20"
-        grader_logic: "def grade(output, expected_output):\n    return 0.9 if str(output).strip() == str(expected_output).strip() else 0.1"
 ---
 
 # Nyaya Portal OpenEnv Environment

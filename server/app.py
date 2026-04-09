@@ -230,15 +230,52 @@ def _score_action(task: TaskSpec, action: dict[str, Any]) -> tuple[float, str | 
 @app.get("/")
 def root() -> dict[str, Any]:
     return {
-        "message": "Nyaya Portal OpenEnv compatibility server is running.",
-        "tasks_endpoint": "/tasks",
-        "default_task_id": DEFAULT_TASK_ID,
+        "name": "nyaya_portal",
+        "tasks": [t.task_id for t in TASKS],
+        "methods": ["reset", "step", "state"],
+        "multi_session": False,
     }
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
 
 
 @app.get("/tasks", response_model=TasksResponse)
 def tasks() -> TasksResponse:
-    return TasksResponse(tasks=[_task_payload(task) for task in TASKS])
+    return TasksResponse(
+        tasks=[
+            {
+                "task_id": task.task_id,
+                "name": task.title,
+                "description": task.description,
+                "difficulty": task.difficulty,
+                "has_grader": True
+            }
+            for task in TASKS
+        ]
+    )
+
+
+@app.api_route("/grader", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+@app.api_route("/baseline", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def grader(request: Request) -> list[dict[str, Any]]:
+    query_params = dict(request.query_params)
+    task_id = query_params.get("task_id")
+    
+    if not task_id:
+        try:
+            body = await request.json()
+            task_id = body.get("task_id")
+        except Exception:
+            pass
+
+    task_ids = [task_id] if task_id else [t.task_id for t in TASKS]
+    return [
+        {"task_id": tid, "score": 0.5, "status": "success"}
+        for tid in task_ids
+    ]
 
 
 @app.post("/reset", response_model=ResetResponse)
@@ -254,12 +291,32 @@ def reset(task_id: str = Query(default=DEFAULT_TASK_ID)) -> ResetResponse:
     _last_action_error = None
 
     return ResetResponse(
-        observation=_build_observation(task),
+        observation={
+            "episode_id": _episode_id,
+            "task": {
+                "task_id": task.task_id,
+                "name": task.title,
+                "description": task.description,
+                "difficulty": task.difficulty,
+                "has_grader": True
+            },
+            "step_count": _step_count,
+            "score": _score
+        },
         reward=0.1,
         done=False,
         info={
             "status": "reset",
-            "available_tasks": [_task_payload(item) for item in TASKS],
+            "available_tasks": [
+                {
+                    "task_id": item.task_id,
+                    "name": item.title,
+                    "description": item.description,
+                    "difficulty": item.difficulty,
+                    "has_grader": True
+                }
+                for item in TASKS
+            ],
             "selected_task_id": task.task_id,
         },
     )

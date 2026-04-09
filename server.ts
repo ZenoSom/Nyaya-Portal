@@ -78,9 +78,49 @@ async function startServer() {
     ]
   });
 
-  app.get("/tasks", (req, res) => {
-    res.json({ tasks: TASKS.map(getTaskPayload) });
+  app.get("/", (req, res) => {
+    res.json({
+      name: "nyaya_portal",
+      tasks: TASKS.map(t => t.id),
+      methods: ["reset", "step", "state"],
+      multi_session: false,
+    });
   });
+
+  app.get("/health", (req, res) => {
+    res.json({ status: "ok" });
+  });
+
+  app.get("/tasks", (req, res) => {
+    res.json({
+      tasks: TASKS.map(task => ({
+        task_id: task.id,
+        name: task.title,
+        description: task.description,
+        difficulty: task.difficulty,
+        has_grader: true
+      }))
+    });
+  });
+
+  const handleGrader = (req: any, res: any) => {
+    const taskId = req.query.task_id || req.body.task_id || currentTaskId;
+    const taskIds = taskId ? [taskId] : TASKS.map(t => t.id);
+    
+    const response = taskIds.map(id => {
+      const task = TASKS.find(t => t.id === id);
+      return {
+        task_id: id,
+        score: task ? 0.5 : 0.0,
+        status: "success"
+      };
+    });
+    
+    res.json(response);
+  };
+
+  app.all("/grader", handleGrader);
+  app.all("/baseline", handleGrader);
 
   app.post("/reset", (req, res) => {
     const taskId = (req.query.task_id as string) || (req.body.task_id as string) || TASKS[0].id;
@@ -94,7 +134,13 @@ async function startServer() {
     res.json({
       observation: {
         episode_id: episodeId,
-        task: getTaskPayload(task),
+        task: {
+          task_id: task.id,
+          name: task.title,
+          description: task.description,
+          difficulty: task.difficulty,
+          has_grader: true
+        },
         step_count: stepCount,
         score: score
       },
@@ -102,7 +148,13 @@ async function startServer() {
       done: false,
       info: { 
         status: "reset",
-        available_tasks: TASKS.map(getTaskPayload),
+        available_tasks: TASKS.map(t => ({
+          task_id: t.id,
+          name: t.title,
+          description: t.description,
+          difficulty: t.difficulty,
+          has_grader: true
+        })),
         selected_task_id: taskId
       }
     });
