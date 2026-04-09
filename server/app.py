@@ -148,18 +148,24 @@ def _visible_cases(task: TaskSpec) -> list[dict[str, Any]]:
 def _task_payload(task: TaskSpec) -> dict[str, Any]:
     return {
         "task_id": task.task_id,
+        "id": task.task_id,
         "difficulty": task.difficulty,
         "score": task.score,
         "title": task.title,
         "description": task.description,
         "input": task.description,
         "expected output": str(task.success_case_id),
+        "expected_output": str(task.success_case_id),
         "grader logic": "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2",
+        "grader_logic": "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2",
         "graders": [
             {
+                "grader_type": "python",
                 "input": task.description,
                 "expected output": str(task.success_case_id),
-                "grader logic": "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2"
+                "expected_output": str(task.success_case_id),
+                "grader logic": "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2",
+                "grader_logic": "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2"
             }
         ],
     }

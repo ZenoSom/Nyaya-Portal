@@ -56,12 +56,17 @@ async function startServer() {
     description: task.description,
     input: task.description,
     "expected output": String(task.success_case_id),
+    expected_output: String(task.success_case_id),
     "grader logic": "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2",
+    grader_logic: "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2",
     graders: [
       {
+        grader_type: "python",
         input: task.description,
         "expected output": String(task.success_case_id),
-        "grader logic": "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2"
+        expected_output: String(task.success_case_id),
+        "grader logic": "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2",
+        grader_logic: "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2"
       }
     ]
   });
@@ -192,16 +197,6 @@ async function startServer() {
       hearing_time,
       courtroom
     });
-  });
-
-  // Some hosting flows may probe or post to /reset. This app is stateless,
-  // so the safest behavior is to send the user back to the main UI.
-  app.get("/reset", (_req, res) => {
-    res.redirect("/");
-  });
-
-  app.post("/reset", (_req, res) => {
-    res.redirect(303, "/");
   });
 
   // Vite middleware for development
