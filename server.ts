@@ -100,7 +100,11 @@ async function startServer() {
       },
       reward: 0.1,
       done: false,
-      info: { status: "reset" }
+      info: { 
+        status: "reset",
+        available_tasks: TASKS.map(getTaskPayload),
+        selected_task_id: taskId
+      }
     });
   });
 
