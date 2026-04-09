@@ -59,6 +59,13 @@ async function startServer() {
     expected_output: String(task.success_case_id),
     "grader logic": "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2",
     grader_logic: "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2",
+    has_grader: true,
+    grader: {
+      grader_type: "python",
+      input: task.description,
+      expected_output: String(task.success_case_id),
+      grader_logic: "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2"
+    },
     graders: [
       {
         grader_type: "python",
