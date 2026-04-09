@@ -154,19 +154,10 @@ def _task_payload(task: TaskSpec) -> dict[str, Any]:
         "description": task.description,
         "graders": [
             {
-                "name": "case_selection",
-                "type": "rule_based",
-                "input_key": "case_id",
-                "expected": task.success_case_id,
-                "weight": 0.75,
-            },
-            {
-                "name": "priority_assignment",
-                "type": "rule_based",
-                "input_key": "priority",
-                "expected": task.expected_priority,
-                "weight": 0.25,
-            },
+                "input": task.description,
+                "expected output": str(task.success_case_id),
+                "grader logic": "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2"
+            }
         ],
     }
 
