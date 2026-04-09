@@ -115,13 +115,13 @@ def call_llm() -> str:
 
 
 def main() -> None:
-    reward = 0.0
+    reward = 0.1
     success = False
     error = "null"
     print(f"[START] task={TASK_NAME} env={BENCHMARK} model={MODEL_NAME}", flush=True)
     try:
         action = _safe_action(call_llm())
-        reward = 1.0
+        reward = 0.9
         success = True
     except Exception as exc:
         action = "hello"

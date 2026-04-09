@@ -26,6 +26,7 @@ class CaseRecord:
 class TaskSpec:
     task_id: str
     difficulty: str
+    score: float
     title: str
     description: str
     success_case_id: int
@@ -51,6 +52,7 @@ TASKS: tuple[TaskSpec, ...] = (
     TaskSpec(
         task_id="easy_case_lookup",
         difficulty="easy",
+        score=0.2,
         title="Find the oldest pending property matter",
         description=(
             "Identify the property case with the highest pending_days value among the visible cases. "
@@ -64,6 +66,7 @@ TASKS: tuple[TaskSpec, ...] = (
     TaskSpec(
         task_id="medium_backlog_triage",
         difficulty="medium",
+        score=0.35,
         title="Prioritize the most urgent criminal backlog",
         description=(
             "Choose the criminal case that should be scheduled next. Consider severity and pending_days. "
@@ -77,6 +80,7 @@ TASKS: tuple[TaskSpec, ...] = (
     TaskSpec(
         task_id="hard_cross_docket_review",
         difficulty="hard",
+        score=0.45,
         title="Select the strongest cross-docket escalation candidate",
         description=(
             "Review the mixed docket and escalate the matter that combines high severity with the longest delay, "
@@ -128,7 +132,7 @@ app = FastAPI(title="Nyaya Portal OpenEnv Compatibility Server")
 _episode_id = str(uuid4())
 _step_count = 0
 _current_task_id = DEFAULT_TASK_ID
-_score = 0.0
+_score = 0.1
 _done = False
 _last_action_error: str | None = None
 
@@ -145,8 +149,25 @@ def _task_payload(task: TaskSpec) -> dict[str, Any]:
     return {
         "task_id": task.task_id,
         "difficulty": task.difficulty,
+        "score": task.score,
         "title": task.title,
         "description": task.description,
+        "graders": [
+            {
+                "name": "case_selection",
+                "type": "rule_based",
+                "input_key": "case_id",
+                "expected": task.success_case_id,
+                "weight": 0.75,
+            },
+            {
+                "name": "priority_assignment",
+                "type": "rule_based",
+                "input_key": "priority",
+                "expected": task.expected_priority,
+                "weight": 0.25,
+            },
+        ],
     }
 
 
@@ -183,29 +204,29 @@ def _score_action(task: TaskSpec, action: dict[str, Any]) -> tuple[float, str | 
     chosen_priority = _normalize_priority(action.get("priority"))
 
     if chosen_case_id is None:
-        return 0.0, "missing_case_id"
+        return 0.1, "missing_case_id"
 
     visible_case_ids = set(task.visible_case_ids)
     if chosen_case_id not in visible_case_ids:
-        return 0.0, "case_not_in_visible_docket"
+        return 0.1, "case_not_in_visible_docket"
 
-    reward = 0.0
+    reward = 0.1
     if chosen_case_id == task.success_case_id:
-        reward += 0.75
+        reward += 0.65
     else:
         selected_case = CASE_INDEX[chosen_case_id]
         target_case = CASE_INDEX[task.success_case_id]
         if selected_case.severity == target_case.severity:
-            reward += 0.25
+            reward += 0.20
         if selected_case.pending_days >= target_case.pending_days - 120:
-            reward += 0.25
+            reward += 0.20
 
     if chosen_priority == task.expected_priority:
-        reward += 0.25
+        reward += 0.20
     elif chosen_priority in {"high", "priority"}:
         reward += 0.1
 
-    return min(reward, 1.0), None
+    return min(reward, 0.95), None
 
 
 @app.get("/")
@@ -230,13 +251,13 @@ def reset(task_id: str = Query(default=DEFAULT_TASK_ID)) -> ResetResponse:
     _episode_id = str(uuid4())
     _step_count = 0
     _current_task_id = task.task_id
-    _score = 0.0
+    _score = 0.1
     _done = False
     _last_action_error = None
 
     return ResetResponse(
         observation=_build_observation(task),
-        reward=0.0,
+        reward=0.1,
         done=False,
         info={
             "status": "reset",
@@ -254,7 +275,7 @@ def step(request: StepRequest) -> StepResponse:
     _step_count += 1
     reward, error = _score_action(task, request.action)
     _score = reward
-    _done = reward >= 0.95 or _step_count >= 1
+    _done = reward >= 0.90 or _step_count >= 1
     _last_action_error = error
 
     return StepResponse(

@@ -30,6 +30,8 @@ The environment exposes three deterministic tasks:
 Each task returns:
 
 - a task description
+- a task `score` strictly between `0` and `1`
+- one or more deterministic `graders`
 - a visible subset of case records
 - deterministic grading through the `step()` call
 
