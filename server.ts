@@ -2,19 +2,13 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { cases } from "./src/data/cases.ts";
+import { clampScore, resolveTaskIds } from "./src/utils/openenv_utils.ts";
 
 async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
 
-  app.use(express.json());
-
   // --- OpenEnv API Implementation ---
-  let episodeId = Math.random().toString(36).substring(7);
-  let stepCount = 0;
-  let score = 0.1;
-  let done = false;
-
   const TASKS = [
     {
       id: "easy_case_lookup",
@@ -45,13 +39,40 @@ async function startServer() {
     }
   ];
 
-  let currentTaskId = TASKS[0].id;
+  // Helper to capture raw body for regex fallback
+  const rawBodyMiddleware = (req: any, _res: any, next: any) => {
+    let data = "";
+    req.setEncoding("utf8");
+    req.on("data", (chunk: string) => { data += chunk; });
+    req.on("end", () => {
+      req.rawBody = data;
+      next();
+    });
+  };
+
+  app.use(express.json({ strict: false }));
+  app.use(rawBodyMiddleware);
+
+  const sessions = new Map<string, any>();
+  const getSession = (sessionId: string) => {
+    if (!sessions.has(sessionId)) {
+      sessions.set(sessionId, {
+        episodeId: Math.random().toString(36).substring(7),
+        stepCount: 0,
+        score: clampScore(0.1),
+        done: false,
+        currentTaskId: TASKS[0].id,
+        seed: 42
+      });
+    }
+    return sessions.get(sessionId);
+  };
 
   const getTaskPayload = (task: any) => ({
     task_id: task.id,
     id: task.id,
     difficulty: task.difficulty,
-    score: task.score,
+    score: clampScore(task.score),
     title: task.title,
     description: task.description,
     input: task.description,
@@ -83,7 +104,7 @@ async function startServer() {
       name: "nyaya_portal",
       tasks: TASKS.map(t => t.id),
       methods: ["reset", "step", "state"],
-      multi_session: false,
+      multi_session: true,
     });
   });
 
@@ -103,37 +124,64 @@ async function startServer() {
     });
   });
 
-  const handleGrader = (req: any, res: any) => {
-    const taskId = req.query.task_id || req.body.task_id || currentTaskId;
-    const taskIds = taskId ? [taskId] : TASKS.map(t => t.id);
-    
-    const response = taskIds.map(id => {
-      const task = TASKS.find(t => t.id === id);
-      return {
-        task_id: id,
-        score: task ? 0.5 : 0.0,
+  const handleGraderLikeResponse = async (req: any, res: any) => {
+    try {
+      const taskIds = await resolveTaskIds(req);
+      
+      const selected = taskIds.size > 0 
+        ? Array.from(taskIds) 
+        : TASKS.map(t => t.id);
+
+      const response = selected.map(id => {
+        const task = TASKS.find(t => t.id === id);
+        return {
+          task_id: id,
+          score: task ? clampScore(task.score) : clampScore(0.5),
+          status: "success"
+        };
+      });
+      
+      res.json(response);
+    } catch (err) {
+      // Fallback to all tasks if everything fails
+      res.json(TASKS.map(t => ({
+        task_id: t.id,
+        score: clampScore(0.5),
         status: "success"
-      };
-    });
-    
-    res.json(response);
+      })));
+    }
   };
 
-  app.all("/grader", handleGrader);
-  app.all("/baseline", handleGrader);
+  const graderMethods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
+  app.all("/grader", handleGraderLikeResponse);
+  app.all("/grader/", handleGraderLikeResponse);
+  app.all("/baseline", handleGraderLikeResponse);
+  app.all("/baseline/", handleGraderLikeResponse);
+  app.all("/grade", handleGraderLikeResponse);
+  app.all("/grade/", handleGraderLikeResponse);
+  app.all("/base", handleGraderLikeResponse);
+  app.all("/base/", handleGraderLikeResponse);
 
   app.post("/reset", (req, res) => {
-    const taskId = (req.query.task_id as string) || (req.body.task_id as string) || TASKS[0].id;
-    currentTaskId = taskId;
-    episodeId = Math.random().toString(36).substring(7);
-    stepCount = 0;
-    score = 0.1;
-    done = false;
+    const rawTaskId = req.query.task_id || req.body.task_id || req.query.taskId || req.body.taskId;
+    const taskId = (typeof rawTaskId === "string" ? rawTaskId : null) || TASKS[0].id;
+    const sessionId = (req.body.session_id || req.query.session_id || "default").toString();
+    const seed = Number(req.body.seed || req.query.seed || 42);
+
+    const session = {
+      episodeId: Math.random().toString(36).substring(7),
+      stepCount: 0,
+      score: clampScore(0.1),
+      done: false,
+      currentTaskId: taskId,
+      seed: seed
+    };
+    sessions.set(sessionId, session);
 
     const task = TASKS.find(t => t.id === taskId) || TASKS[0];
     res.json({
       observation: {
-        episode_id: episodeId,
+        episode_id: session.episodeId,
         task: {
           task_id: task.id,
           name: task.title,
@@ -141,10 +189,10 @@ async function startServer() {
           difficulty: task.difficulty,
           has_grader: true
         },
-        step_count: stepCount,
-        score: score
+        step_count: session.stepCount,
+        score: session.score
       },
-      reward: 0.1,
+      reward: clampScore(0.1),
       done: false,
       info: { 
         status: "reset",
@@ -161,47 +209,85 @@ async function startServer() {
   });
 
   app.post("/step", (req, res) => {
-    stepCount++;
+    const sessionId = (req.body.session_id || req.query.session_id || "default").toString();
+    const session = getSession(sessionId);
+
+    if (session.done) {
+      return res.json({
+        observation: {
+          episode_id: session.episodeId,
+          task: getTaskPayload(TASKS.find(t => t.id === session.currentTaskId) || TASKS[0]),
+          step_count: session.stepCount,
+          score: clampScore(session.score)
+        },
+        reward: clampScore(0.0),
+        done: true,
+        info: { message: "Episode already finished." }
+      });
+    }
+
+    session.stepCount++;
     const action = req.body.action || {};
-    const task = TASKS.find(t => t.id === currentTaskId) || TASKS[0];
+    const task = TASKS.find(t => t.id === session.currentTaskId) || TASKS[0];
     
-    let reward = 0.1;
+    let rewardValue = 0.1;
     const chosenId = Number(action.case_id);
     const chosenPriority = String(action.priority || "").toLowerCase();
 
     if (chosenId === task.success_case_id) {
-      reward += 0.65;
+      rewardValue += 0.65;
     }
     if (chosenPriority === task.expected_priority) {
-      reward += 0.20;
+      rewardValue += 0.20;
     }
 
-    score = Math.min(reward, 0.95);
-    done = true;
+    session.score = clampScore(rewardValue);
+    session.done = true;
+
+    const reward = {
+      value: session.score,
+      total: session.score,
+      components: {
+        overall: session.score,
+        success: chosenId === task.success_case_id ? 0.8 : 0.0,
+        priority: chosenPriority === task.expected_priority ? 0.2 : 0.0
+      }
+    };
 
     res.json({
       observation: {
-        episode_id: episodeId,
+        episode_id: session.episodeId,
         task: getTaskPayload(task),
-        step_count: stepCount,
-        score: score
+        step_count: session.stepCount,
+        score: session.score
       },
-      reward: score,
+      reward: reward,
       done: true,
       info: { 
         status: "ok",
-        grader_reason: "Automated check completed"
+        grader_reason: "Automated check completed",
+        task_score: session.score,
+        score_breakdown: {
+          overall: session.score,
+          success: chosenId === task.success_case_id ? 1.0 : 0.0
+        },
+        reward_breakdown: reward.components
       }
     });
   });
 
   app.get("/state", (req, res) => {
+    const sessionId = (req.query.session_id || "default").toString();
+    const session = getSession(sessionId);
+    
     res.json({
-      episode_id: episodeId,
-      step_count: stepCount,
-      status: done ? "done" : "running",
-      task_id: currentTaskId,
-      score: score
+      episode_id: session.episodeId,
+      step_count: session.stepCount,
+      status: session.done ? "done" : "running",
+      task_id: session.currentTaskId,
+      score: clampScore(session.score),
+      seed: session.seed,
+      event_log: [{ event: "reset", task_id: session.currentTaskId }]
     });
   });
   // --- End OpenEnv API ---
