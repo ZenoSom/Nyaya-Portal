@@ -8,5 +8,6 @@ setup(
         "fastapi>=0.110.0",
         "uvicorn[standard]>=0.30.0",
         "openai>=1.0.0",
+        "openenv-core>=0.2.0",
     ],
 )
