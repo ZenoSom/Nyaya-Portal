@@ -59,9 +59,9 @@ class _ProxyClient:
         self.chat = _Chat(base_url=base_url, api_key=api_key)
 
 
-API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-API_KEY = os.getenv("API_KEY")
+API_BASE_URL = os.environ["API_BASE_URL"]
+MODEL_NAME = os.environ["MODEL_NAME"]
+API_KEY = os.environ["API_KEY"]
 ENV_BASE_URL = os.getenv("ENV_BASE_URL", "http://localhost:8000")
 TASK_NAME = os.getenv("NYAYA_TASK", "easy_case_lookup")
 BENCHMARK = os.getenv("NYAYA_BENCHMARK", "nyaya_portal")
@@ -141,9 +141,7 @@ def _extract_action(content: str, cases: list[dict[str, Any]]) -> dict[str, Any]
     return {"case_id": best_case["case_id"], "priority": "urgent"}
 
 
-def _make_client() -> Any | None:
-    if not API_BASE_URL or not API_KEY:
-        return None
+def _make_client() -> Any:
     if _OpenAIClient is not None:
         try:
             return _OpenAIClient(base_url=API_BASE_URL, api_key=API_KEY)
@@ -152,9 +150,7 @@ def _make_client() -> Any | None:
     return _ProxyClient(base_url=API_BASE_URL, api_key=API_KEY)
 
 
-def get_model_action(client: Any | None, task: dict[str, Any], cases: list[dict[str, Any]]) -> dict[str, Any]:
-    if client is None:
-        return _extract_action("", cases)
+def get_model_action(client: Any, task: dict[str, Any], cases: list[dict[str, Any]]) -> dict[str, Any]:
     prompt = _task_prompt(task, cases)
     try:
         completion = client.chat.completions.create(
