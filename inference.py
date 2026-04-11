@@ -167,22 +167,19 @@ def get_model_action(task: dict[str, Any], cases: list[dict[str, Any]], client: 
 
 
 # ── Main loop ──────────────────────────────────────────────────────────────
-def main() -> None:
+def run_task(task_name: str, client: Any) -> None:
     rewards: List[float] = []
     steps_taken = 0
     score = 0.0
     success = False
 
-    # Try to create the OpenAI client (may fail in some environments)
-    client = _try_openai_client()
-
-    log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
+    log_start(task=task_name, env=BENCHMARK, model=MODEL_NAME)
 
     try:
         # ── 1. Try to connect to the environment ──────────────────────────
         env_available = True
         try:
-            reset_payload = _env_request("POST", "/reset", {"task_id": TASK_NAME})
+            reset_payload = _env_request("POST", "/reset", {"task_id": task_name})
             observation = reset_payload.get("observation", {})
             task_data = observation.get("task", FALLBACK_TASK)
             cases_data = observation.get("cases", FALLBACK_CASES)
@@ -199,10 +196,8 @@ def main() -> None:
             if done:
                 break
 
-            # THIS is the critical LLM call that must go through the proxy
             action_payload = get_model_action(task_data, cases_data, client)
 
-            # Try to submit action to environment
             reward = 0.0
             error = None
             if env_available:
@@ -245,6 +240,16 @@ def main() -> None:
 
     finally:
         log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
+
+
+def main() -> None:
+    client = _try_openai_client()
+    
+    # Iterate over all 3 tasks to prove graders work to validation server
+    tasks_to_run = ["easy_case_lookup", "medium_backlog_triage", "hard_cross_docket_review"]
+    
+    for t_name in tasks_to_run:
+        run_task(t_name, client)
 
 
 if __name__ == "__main__":
