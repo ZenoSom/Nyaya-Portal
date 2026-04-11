@@ -25,47 +25,17 @@ endpoints:
 
 tasks:
   - id: easy_case_lookup
-    name: "Find Oldest Pending Property Matter"
-    task_id: easy_case_lookup
-    description: "Find the oldest pending property matter."
+    name: Find Oldest Pending Property Matter
+    description: Find the oldest pending property matter.
     difficulty: easy
-    input: "Find the oldest pending property matter."
-    expected_output: "8"
-    has_grader: true
-    grader:
-      grader_type: python
-      path: graders/easy_case_lookup.py
-      entrypoint: grade
-      module: graders.easy_case_lookup
-      input: "Find the oldest pending property matter."
-      expected_output: "8"
+    grader: graders.easy_case_lookup:grade
   - id: medium_backlog_triage
-    name: "Prioritize Most Urgent Criminal Backlog"
-    task_id: medium_backlog_triage
-    description: "Prioritize the most urgent criminal backlog."
+    name: Prioritize Most Urgent Criminal Backlog
+    description: Prioritize the most urgent criminal backlog.
     difficulty: medium
-    input: "Prioritize the most urgent criminal backlog."
-    expected_output: "20"
-    has_grader: true
-    grader:
-      grader_type: python
-      path: graders/medium_backlog_triage.py
-      entrypoint: grade
-      module: graders.medium_backlog_triage
-      input: "Prioritize the most urgent criminal backlog."
-      expected_output: "20"
+    grader: graders.medium_backlog_triage:grade
   - id: hard_cross_docket_review
-    name: "Select Strongest Cross-Docket Escalation Candidate"
-    task_id: hard_cross_docket_review
-    description: "Select the strongest cross-docket escalation candidate."
+    name: Select Strongest Cross-Docket Escalation Candidate
+    description: Select the strongest cross-docket escalation candidate.
     difficulty: hard
-    input: "Select the strongest cross-docket escalation candidate."
-    expected_output: "20"
-    has_grader: true
-    grader:
-      grader_type: python
-      path: graders/hard_cross_docket_review.py
-      entrypoint: grade
-      module: graders.hard_cross_docket_review
-      input: "Select the strongest cross-docket escalation candidate."
-      expected_output: "20"
+    grader: graders.hard_cross_docket_review:grade
