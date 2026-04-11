@@ -1,6 +1,47 @@
-def grade(output, expected_output):
+"""
+Grader for easy_case_lookup task.
+Task: Find the oldest pending property matter.
+Expected: case_id=8 (Meera Iyer, Property, 500 pending days)
+Score: strictly in (0.0, 1.0)
+"""
+
+
+def grade(output: str, expected_output: str = "8") -> float:
     """
-    Grader for easy_case_lookup: Find the oldest pending property matter.
-    Expected output is '8'.
+    Grade the easy_case_lookup task.
+    
+    Args:
+        output: The model's output (should be a case_id as string, or JSON)
+        expected_output: The expected case_id ('8')
+    
+    Returns:
+        float: Score between 0.0 and 1.0 (exclusive)
     """
-    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2
+    import json
+
+    output_str = str(output).strip()
+    expected_str = str(expected_output).strip()
+
+    # Try to extract case_id from JSON output
+    try:
+        parsed = json.loads(output_str)
+        if isinstance(parsed, dict):
+            case_id = str(parsed.get("case_id", "")).strip()
+            if case_id == expected_str:
+                return 0.85
+            # Partial credit for selecting a high-severity property case
+            if parsed.get("priority", "").lower() in ("urgent", "high"):
+                return 0.35
+            return 0.15
+    except Exception:
+        pass
+
+    # Direct string match
+    if output_str == expected_str:
+        return 0.85
+
+    # Partial credit: output contains the expected case_id
+    if expected_str in output_str:
+        return 0.5
+
+    return 0.15
