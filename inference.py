@@ -12,7 +12,7 @@ from openai import OpenAI
 API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
 MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
 HF_TOKEN = os.getenv("HF_TOKEN")
-API_KEY = os.getenv("API_KEY") or HF_TOKEN
+API_KEY = os.getenv("API_KEY") or HF_TOKEN or "dummy_key"
 
 # Project Specific Constants
 ENV_BASE_URL = os.getenv("ENV_BASE_URL", "http://localhost:7860")
@@ -92,8 +92,6 @@ def get_model_action(client: OpenAI, task: dict[str, Any], cases: list[dict[str,
     return {"case_id": best_case["case_id"], "priority": "urgent"}
 
 def main() -> None:
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
-    
     # Resolve the correct task ID from server
     try:
         tasks_resp = _http_json("GET", "/tasks")
@@ -110,6 +108,8 @@ def main() -> None:
     log_start(task=task_id, env=BENCHMARK, model=MODEL_NAME)
 
     try:
+        client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+        
         reset_payload = _http_json("POST", "/reset", {"task_id": task_id})
         observation = reset_payload.get("observation", {})
         done = bool(reset_payload.get("done", False))
