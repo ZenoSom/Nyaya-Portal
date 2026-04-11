@@ -4,91 +4,25 @@
   "requestFramePermissions": [],
   "tasks": [
     {
-      "task_id": "easy_case_lookup",
       "id": "easy_case_lookup",
-      "input": "Find the oldest pending property matter.",
-      "expected_output": "8",
+      "name": "Find Oldest Pending Property Matter",
+      "description": "Find the oldest pending property matter.",
       "difficulty": "easy",
-      "score": 0.25,
-      "has_grader": true,
-      "grader_path": "graders/easy_case_lookup.py",
-      "grader_entrypoint": "grade",
-      "grader": {
-        "grader_type": "python",
-        "path": "graders/easy_case_lookup.py",
-        "entrypoint": "grade",
-        "module": "graders.easy_case_lookup",
-        "input": "Find the oldest pending property matter.",
-        "expected_output": "8"
-      },
-      "graders": [
-        {
-          "grader_type": "python",
-          "path": "graders/easy_case_lookup.py",
-          "entrypoint": "grade",
-          "module": "graders.easy_case_lookup",
-          "input": "Find the oldest pending property matter.",
-          "expected_output": "8"
-        }
-      ]
+      "grader": "graders.easy_case_lookup:grade"
     },
     {
-      "task_id": "medium_backlog_triage",
       "id": "medium_backlog_triage",
-      "input": "Prioritize the most urgent criminal backlog.",
-      "expected_output": "20",
+      "name": "Prioritize Most Urgent Criminal Backlog",
+      "description": "Prioritize the most urgent criminal backlog.",
       "difficulty": "medium",
-      "score": 0.35,
-      "has_grader": true,
-      "grader_path": "graders/medium_backlog_triage.py",
-      "grader_entrypoint": "grade",
-      "grader": {
-        "grader_type": "python",
-        "path": "graders/medium_backlog_triage.py",
-        "entrypoint": "grade",
-        "module": "graders.medium_backlog_triage",
-        "input": "Prioritize the most urgent criminal backlog.",
-        "expected_output": "20"
-      },
-      "graders": [
-        {
-          "grader_type": "python",
-          "path": "graders/medium_backlog_triage.py",
-          "entrypoint": "grade",
-          "module": "graders.medium_backlog_triage",
-          "input": "Prioritize the most urgent criminal backlog.",
-          "expected_output": "20"
-        }
-      ]
+      "grader": "graders.medium_backlog_triage:grade"
     },
     {
-      "task_id": "hard_cross_docket_review",
       "id": "hard_cross_docket_review",
-      "input": "Select the strongest cross-docket escalation candidate.",
-      "expected_output": "20",
+      "name": "Select Strongest Cross-Docket Escalation Candidate",
+      "description": "Select the strongest cross-docket escalation candidate.",
       "difficulty": "hard",
-      "score": 0.45,
-      "has_grader": true,
-      "grader_path": "graders/hard_cross_docket_review.py",
-      "grader_entrypoint": "grade",
-      "grader": {
-        "grader_type": "python",
-        "path": "graders/hard_cross_docket_review.py",
-        "entrypoint": "grade",
-        "module": "graders.hard_cross_docket_review",
-        "input": "Select the strongest cross-docket escalation candidate.",
-        "expected_output": "20"
-      },
-      "graders": [
-        {
-          "grader_type": "python",
-          "path": "graders/hard_cross_docket_review.py",
-          "entrypoint": "grade",
-          "module": "graders.hard_cross_docket_review",
-          "input": "Select the strongest cross-docket escalation candidate.",
-          "expected_output": "20"
-        }
-      ]
+      "grader": "graders.hard_cross_docket_review:grade"
     }
   ]
 }
