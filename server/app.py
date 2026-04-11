@@ -308,6 +308,11 @@ async def grader(request: Request) -> list[dict[str, Any]]:
                 "graders": task_payload["graders"],
             }
         )
+    
+    # If a specific task was requested, return a single object rather than a list
+    if task_id and len(payloads) == 1:
+        return payloads[0]
+        
     return payloads
 
 
