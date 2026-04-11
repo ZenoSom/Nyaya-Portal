@@ -31,6 +31,7 @@ tasks:
     difficulty: easy
     input: "Find the oldest pending property matter."
     expected_output: "8"
+    has_grader: true
     grader: "graders.easy_case_lookup:grade"
   - id: medium_backlog_triage
     name: "Prioritize Most Urgent Criminal Backlog"
@@ -39,6 +40,7 @@ tasks:
     difficulty: medium
     input: "Prioritize the most urgent criminal backlog."
     expected_output: "20"
+    has_grader: true
     grader: "graders.medium_backlog_triage:grade"
   - id: hard_cross_docket_review
     name: "Select Strongest Cross-Docket Escalation Candidate"
@@ -47,4 +49,5 @@ tasks:
     difficulty: hard
     input: "Select the strongest cross-docket escalation candidate."
     expected_output: "20"
+    has_grader: true
     grader: "graders.hard_cross_docket_review:grade"

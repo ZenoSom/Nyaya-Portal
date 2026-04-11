@@ -243,9 +243,9 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/tasks", response_model=TasksResponse)
-def tasks() -> TasksResponse:
-    return TasksResponse(tasks=[_task_payload(task) for task in TASKS])
+@app.get("/tasks", response_model=list[dict[str, Any]])
+def tasks() -> list[dict[str, Any]]:
+    return [_task_payload(task) for task in TASKS]
 
 
 def _run_grader(task: TaskSpec, output: str) -> float:
