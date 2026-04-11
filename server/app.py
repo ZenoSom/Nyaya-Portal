@@ -230,8 +230,11 @@ def root() -> dict[str, Any]:
     return {
         "name": "nyaya_portal",
         "tasks": [t.task_id for t in TASKS],
-        "methods": ["reset", "step", "state"],
+        "methods": ["reset", "step", "state", "grader", "baseline"],
         "multi_session": False,
+        "grader": True,
+        "has_grader": True,
+        "graders_available": [t.task_id for t in TASKS],
     }
 
 
