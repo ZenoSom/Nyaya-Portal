@@ -59,9 +59,10 @@ class _ProxyClient:
         self.chat = _Chat(base_url=base_url, api_key=api_key)
 
 
-API_BASE_URL = os.environ["API_BASE_URL"]
-MODEL_NAME = os.environ["MODEL_NAME"]
-API_KEY = os.environ["API_KEY"]
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+HF_TOKEN = os.getenv("HF_TOKEN")
+API_KEY = os.getenv("API_KEY") or HF_TOKEN
 ENV_BASE_URL = os.getenv("ENV_BASE_URL", "http://localhost:8000")
 TASK_NAME = os.getenv("NYAYA_TASK", "easy_case_lookup")
 BENCHMARK = os.getenv("NYAYA_BENCHMARK", "nyaya_portal")
