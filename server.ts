@@ -377,8 +377,8 @@ async function startServer() {
     }
   });
 
-  // AI Logic: Generate hearing schedule
-  app.get("/api/run/:id", (req, res) => {
+  // AI Logic: Generate hearing schedule with real Gemini AI
+  app.get("/api/run/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     const found = cases.find(c => c.case_id === id);
 
@@ -386,27 +386,53 @@ async function startServer() {
       return res.status(404).json({ error: "Case not found" });
     }
 
-    const priority = found.pending_days > 200 ? "High" : "Normal";
-    const schedule_days = Math.floor(Math.random() * 11) + 5; // 5-15 range
-    
-    const hearing_date = new Date();
-    hearing_date.setDate(hearing_date.getDate() + schedule_days);
-    
-    const times = ["10:00 AM", "11:30 AM", "2:00 PM"];
-    const hearing_time = times[Math.floor(Math.random() * times.length)];
-    const courtroom = `Courtroom No. ${Math.floor(Math.random() * 20) + 1}`;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+      // Fallback to dummy logic if no API key is provided
+      const priority = found.pending_days > 400 ? "High" : "Normal";
+      const schedule_days = Math.floor(Math.random() * 11) + 5;
+      const hearing_date = new Date();
+      hearing_date.setDate(hearing_date.getDate() + schedule_days);
+      const times = ["10:00 AM", "11:30 AM", "2:00 PM"];
+      
+      return res.json({
+        priority,
+        schedule_days,
+        hearing_date: hearing_date.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }),
+        hearing_time: times[Math.floor(Math.random() * times.length)],
+        courtroom: `Courtroom No. ${Math.floor(Math.random() * 20) + 1}`,
+        ai_reasoning: "Automated priority based on pending days (Fallback mode)."
+      });
+    }
 
-    res.json({
-      priority,
-      schedule_days,
-      hearing_date: hearing_date.toLocaleDateString('en-IN', { 
-        day: '2-digit', 
-        month: 'long', 
-        year: 'numeric' 
-      }),
-      hearing_time,
-      courtroom
-    });
+    try {
+      const { GoogleGenerativeAI } = await import("@google/genai");
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const prompt = `As a Judicial AI Assistant, analyze this court case and generate a hearing schedule in JSON format:
+      Person: ${found.person_name}
+      Case Type: ${found.case_type}
+      Severity: ${found.severity}
+      Pending Days: ${found.pending_days}
+      Court: ${found.court}
+      Judge: ${found.judge}
+      
+      Return JSON with: priority (High/Normal), hearing_date (DD Month YYYY), hearing_time (10:00 AM/11:30 AM/2:00 PM), courtroom (text), and ai_reasoning (1 sentence).`;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      
+      // Basic JSON extraction from markdown if present
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const data = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(text);
+      
+      res.json(data);
+    } catch (err) {
+      console.error("Gemini AI error:", err);
+      res.status(500).json({ error: "AI processing failed", details: String(err) });
+    }
   });
 
   // Vite middleware for development

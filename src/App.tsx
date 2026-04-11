@@ -6,7 +6,6 @@ import {
   Activity, Info, Monitor
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { GoogleGenAI, Type } from "@google/genai";
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, AreaChart, Area
@@ -138,8 +137,7 @@ const AnimatedBackground = () => {
   );
 };
 
-// Initialize Gemini
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+// Initialize Gemini (Logic moved to backend for security)
 
 interface Case {
   case_id: number;
@@ -253,50 +251,17 @@ export default function App() {
   };
 
   const generateHearingAI = async (caseData: Case) => {
-    if (!process.env.GEMINI_API_KEY) {
-      setError('Gemini API Key is missing. Please add it to the Secrets panel.');
-      return;
-    }
-
     setLoading(true);
+    setError('');
     try {
-      const model = "gemini-3-flash-preview";
-      const prompt = `As a Judicial AI Assistant, analyze this court case and generate a hearing schedule:
-      Person: ${caseData.person_name}
-      Case Type: ${caseData.case_type}
-      Severity: ${caseData.severity}
-      Pending Days: ${caseData.pending_days}
-      Court: ${caseData.court}
-      Judge: ${caseData.judge}
+      const response = await fetch(`/api/run/${caseData.case_id}`);
+      if (!response.ok) throw new Error('AI Generation failed');
       
-      Determine the priority (High/Normal), a hearing date (within 5-20 days from today), a time (10:00 AM, 11:30 AM, or 2:00 PM), and a courtroom number. 
-      Also provide a brief 1-sentence AI reasoning for the priority.`;
-
-      const response = await genAI.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              priority: { type: Type.STRING },
-              schedule_days: { type: Type.NUMBER },
-              hearing_date: { type: Type.STRING },
-              hearing_time: { type: Type.STRING },
-              courtroom: { type: Type.STRING },
-              ai_reasoning: { type: Type.STRING }
-            },
-            required: ["priority", "hearing_date", "hearing_time", "courtroom", "ai_reasoning"]
-          }
-        }
-      });
-
-      const result = JSON.parse(response.text || '{}');
+      const result = await response.json();
       setHearing(result);
     } catch (err) {
       console.error(err);
-      setError('AI Generation failed. Please check your API key in the Secrets panel.');
+      setError('AI Analysis failed. Please ensure the server is configured correctly.');
     } finally {
       setLoading(false);
     }
