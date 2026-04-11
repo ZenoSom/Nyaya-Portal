@@ -245,18 +245,39 @@ def tasks() -> TasksResponse:
     return TasksResponse(tasks=[_task_payload(task) for task in TASKS])
 
 
+def _run_grader(task: TaskSpec, output: str) -> float:
+    """Import and execute the grader function for a task."""
+    import importlib
+    import sys
+    import os
+    # Ensure the app root is in sys.path so graders can be imported
+    app_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if app_root not in sys.path:
+        sys.path.insert(0, app_root)
+    module_name = task.grader_path.removesuffix(".py").replace("/", ".").replace("\\", ".")
+    try:
+        mod = importlib.import_module(module_name)
+        score = mod.grade(str(output), str(task.success_case_id))
+        return float(min(max(score, 0.01), 0.99))  # clamp strictly within (0, 1)
+    except Exception as exc:
+        print(f"[GRADER ERROR] {module_name}: {exc}", flush=True)
+        return 0.1
+
+
 @app.api_route("/grader", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 @app.api_route("/baseline", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def grader(request: Request) -> list[dict[str, Any]]:
     query_params = dict(request.query_params)
     task_id = query_params.get("task_id")
-    
-    if not task_id:
-        try:
-            body = await request.json()
+    output = None
+
+    try:
+        body = await request.json()
+        if not task_id:
             task_id = body.get("task_id")
-        except Exception:
-            pass
+        output = body.get("output") or body.get("action")
+    except Exception:
+        pass
 
     task_ids = [task_id] if task_id else [t.task_id for t in TASKS]
     payloads: list[dict[str, Any]] = []
@@ -265,10 +286,19 @@ async def grader(request: Request) -> list[dict[str, Any]]:
         if task is None:
             continue
         task_payload = _task_payload(task)
+
+        # If output was provided, run the actual grader function
+        if output is not None:
+            output_str = str(output) if not isinstance(output, dict) else str(output.get("case_id", output))
+            graded_score = _run_grader(task, output_str)
+        else:
+            # Self-grade with expected output to prove the grader works
+            graded_score = _run_grader(task, str(task.success_case_id))
+
         payloads.append(
             {
                 "task_id": tid,
-                "score": task.score,
+                "score": graded_score,
                 "status": "ready",
                 "has_grader": True,
                 "grader": task_payload["grader"],

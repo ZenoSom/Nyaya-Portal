@@ -1,24 +1,13 @@
-FROM node:20-bookworm-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3 python3-pip python-is-python3 \
-    && python --version \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY requirements.txt ./
-RUN pip install --break-system-packages --no-cache-dir -r requirements.txt
-
-COPY package.json package-lock.json ./
-RUN npm ci
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-RUN npm run build
 
-ENV NODE_ENV=production
 ENV PORT=7860
-
 EXPOSE 7860
 
-CMD ["npm", "start"]
+CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]
