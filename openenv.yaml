@@ -2,6 +2,9 @@ spec_version: 1
 name: nyaya_portal
 description: Nyaya Portal - Court Case Lookup System.
 type: space
+runtime: fastapi
+app: server.app:app
+port: 7860
 
 entrypoint:
   module: server.app
@@ -20,3 +23,22 @@ endpoints:
   grader: /grader
   baseline: /baseline
 
+tasks:
+  - id: easy_case_lookup
+    task_id: easy_case_lookup
+    description: Find the oldest pending property matter.
+    input: Find the oldest pending property matter.
+    expected_output: "8"
+    grader: "graders.easy_case_lookup:grade"
+  - id: medium_backlog_triage
+    task_id: medium_backlog_triage
+    description: Prioritize the most urgent criminal backlog.
+    input: Prioritize the most urgent criminal backlog.
+    expected_output: "20"
+    grader: "graders.medium_backlog_triage:grade"
+  - id: hard_cross_docket_review
+    task_id: hard_cross_docket_review
+    description: Select the strongest cross-docket escalation candidate.
+    input: Select the strongest cross-docket escalation candidate.
+    expected_output: "20"
+    grader: "graders.hard_cross_docket_review:grade"

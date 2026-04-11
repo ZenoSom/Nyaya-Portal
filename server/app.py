@@ -6,7 +6,7 @@ from typing import Any
 from uuid import uuid4
 
 import uvicorn
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request
 from pydantic import BaseModel, Field
 
 
@@ -33,6 +33,7 @@ class TaskSpec:
     expected_priority: str
     success_reason: str
     visible_case_ids: tuple[int, ...]
+    grader_path: str
 
 
 CASES: tuple[CaseRecord, ...] = (
@@ -59,6 +60,7 @@ TASKS: tuple[TaskSpec, ...] = (
         expected_priority="urgent",
         success_reason="Meera Iyer's property dispute has the highest property backlog in the visible docket.",
         visible_case_ids=(1, 4, 8, 11),
+        grader_path="graders/easy_case_lookup.py",
     ),
     TaskSpec(
         task_id="medium_backlog_triage",
@@ -70,6 +72,7 @@ TASKS: tuple[TaskSpec, ...] = (
         expected_priority="urgent",
         success_reason="Ananya Panday's criminal case has the highest pending_days among severe criminal matters.",
         visible_case_ids=(1, 5, 14, 20),
+        grader_path="graders/medium_backlog_triage.py",
     ),
     TaskSpec(
         task_id="hard_cross_docket_review",
@@ -81,6 +84,7 @@ TASKS: tuple[TaskSpec, ...] = (
         expected_priority="urgent",
         success_reason="Ananya Panday remains the strongest escalation candidate even across the wider mixed docket.",
         visible_case_ids=(4, 5, 8, 14, 20, 23),
+        grader_path="graders/hard_cross_docket_review.py",
     ),
 )
 
@@ -137,6 +141,14 @@ def _visible_cases(task: TaskSpec) -> list[dict[str, Any]]:
 
 
 def _task_payload(task: TaskSpec) -> dict[str, Any]:
+    grader_payload = {
+        "grader_type": "python",
+        "path": task.grader_path,
+        "entrypoint": "grade",
+        "module": task.grader_path.removesuffix(".py").replace("/", "."),
+        "input": task.description,
+        "expected_output": str(task.success_case_id),
+    }
     return {
         "task_id": task.task_id,
         "id": task.task_id,
@@ -147,25 +159,11 @@ def _task_payload(task: TaskSpec) -> dict[str, Any]:
         "input": task.description,
         "expected output": str(task.success_case_id),
         "expected_output": str(task.success_case_id),
-        "grader logic": "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2",
-        "grader_logic": "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2",
+        "grader_path": task.grader_path,
+        "grader_entrypoint": "grade",
         "has_grader": True,
-        "grader": {
-            "grader_type": "python",
-            "input": task.description,
-            "expected_output": str(task.success_case_id),
-            "grader_logic": "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2"
-        },
-        "graders": [
-            {
-                "grader_type": "python",
-                "input": task.description,
-                "expected output": str(task.success_case_id),
-                "expected_output": str(task.success_case_id),
-                "grader logic": "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2",
-                "grader_logic": "def grade(output, expected_output):\n    return 0.8 if str(output).strip() == str(expected_output).strip() else 0.2"
-            }
-        ],
+        "grader": grader_payload,
+        "graders": [grader_payload],
     }
 
 
@@ -244,18 +242,7 @@ def health() -> dict[str, str]:
 
 @app.get("/tasks", response_model=TasksResponse)
 def tasks() -> TasksResponse:
-    return TasksResponse(
-        tasks=[
-            {
-                "task_id": task.task_id,
-                "name": task.title,
-                "description": task.description,
-                "difficulty": task.difficulty,
-                "has_grader": True
-            }
-            for task in TASKS
-        ]
-    )
+    return TasksResponse(tasks=[_task_payload(task) for task in TASKS])
 
 
 @app.api_route("/grader", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
@@ -272,17 +259,39 @@ async def grader(request: Request) -> list[dict[str, Any]]:
             pass
 
     task_ids = [task_id] if task_id else [t.task_id for t in TASKS]
-    return [
-        {"task_id": tid, "score": 0.5, "status": "success"}
-        for tid in task_ids
-    ]
+    payloads: list[dict[str, Any]] = []
+    for tid in task_ids:
+        task = TASK_INDEX.get(tid)
+        if task is None:
+            continue
+        task_payload = _task_payload(task)
+        payloads.append(
+            {
+                "task_id": tid,
+                "score": task.score,
+                "status": "ready",
+                "has_grader": True,
+                "grader": task_payload["grader"],
+                "graders": task_payload["graders"],
+            }
+        )
+    return payloads
 
 
 @app.post("/reset", response_model=ResetResponse)
-def reset(task_id: str = Query(default=DEFAULT_TASK_ID)) -> ResetResponse:
+async def reset(request: Request, task_id: str = Query(default=DEFAULT_TASK_ID)) -> ResetResponse:
     global _episode_id, _step_count, _current_task_id, _score, _done, _last_action_error
 
-    task = TASK_INDEX.get(task_id, TASK_INDEX[DEFAULT_TASK_ID])
+    selected_task_id = task_id
+    try:
+        body = await request.json()
+        body_task_id = body.get("task_id") or body.get("taskId")
+        if isinstance(body_task_id, str) and body_task_id.strip():
+            selected_task_id = body_task_id.strip()
+    except Exception:
+        pass
+
+    task = TASK_INDEX.get(selected_task_id, TASK_INDEX[DEFAULT_TASK_ID])
     _episode_id = str(uuid4())
     _step_count = 0
     _current_task_id = task.task_id
@@ -291,32 +300,12 @@ def reset(task_id: str = Query(default=DEFAULT_TASK_ID)) -> ResetResponse:
     _last_action_error = None
 
     return ResetResponse(
-        observation={
-            "episode_id": _episode_id,
-            "task": {
-                "task_id": task.task_id,
-                "name": task.title,
-                "description": task.description,
-                "difficulty": task.difficulty,
-                "has_grader": True
-            },
-            "step_count": _step_count,
-            "score": _score
-        },
+        observation=_build_observation(task),
         reward=0.1,
         done=False,
         info={
             "status": "reset",
-            "available_tasks": [
-                {
-                    "task_id": item.task_id,
-                    "name": item.title,
-                    "description": item.description,
-                    "difficulty": item.difficulty,
-                    "has_grader": True
-                }
-                for item in TASKS
-            ],
+            "available_tasks": [_task_payload(item) for item in TASKS],
             "selected_task_id": task.task_id,
         },
     )
