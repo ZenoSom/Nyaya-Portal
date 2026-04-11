@@ -141,29 +141,12 @@ def _visible_cases(task: TaskSpec) -> list[dict[str, Any]]:
 
 
 def _task_payload(task: TaskSpec) -> dict[str, Any]:
-    grader_payload = {
-        "grader_type": "python",
-        "path": task.grader_path,
-        "entrypoint": "grade",
-        "module": task.grader_path.removesuffix(".py").replace("/", "."),
-        "input": task.description,
-        "expected_output": str(task.success_case_id),
-    }
     return {
-        "task_id": task.task_id,
         "id": task.task_id,
-        "difficulty": task.difficulty,
-        "score": task.score,
-        "title": task.title,
+        "name": task.title,
         "description": task.description,
-        "input": task.description,
-        "expected output": str(task.success_case_id),
-        "expected_output": str(task.success_case_id),
-        "grader_path": task.grader_path,
-        "grader_entrypoint": "grade",
-        "has_grader": True,
-        "grader": grader_payload,
-        "graders": [grader_payload],
+        "difficulty": task.difficulty,
+        "grader": f"graders.{task.task_id}:grade"
     }
 
 
@@ -302,10 +285,7 @@ async def grader(request: Request) -> list[dict[str, Any]]:
             {
                 "task_id": tid,
                 "score": graded_score,
-                "status": "ready",
-                "has_grader": True,
-                "grader": task_payload["grader"],
-                "graders": task_payload["graders"],
+                "status": "ready"
             }
         )
     
