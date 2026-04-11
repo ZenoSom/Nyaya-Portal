@@ -8,11 +8,11 @@ from typing import Any, List, Optional
 
 from openai import OpenAI
 
-# Mandatory Variables and Defaults
-API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
-MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
-HF_TOKEN = os.getenv("HF_TOKEN")
-API_KEY = os.getenv("API_KEY") or HF_TOKEN or "dummy_key"
+# Mandatory Variables and Defaults (Strict adherence to Validator requirements)
+API_BASE_URL = os.environ.get("API_BASE_URL") or "https://router.huggingface.co/v1"
+MODEL_NAME = os.environ.get("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
+HF_TOKEN = os.environ.get("HF_TOKEN")
+API_KEY = os.environ.get("API_KEY") or HF_TOKEN
 
 # Project Specific Constants
 ENV_BASE_URL = os.getenv("ENV_BASE_URL", "http://localhost:7860")
@@ -69,17 +69,19 @@ def get_model_action(client: OpenAI, task: dict[str, Any], cases: list[dict[str,
     prompt = _task_prompt(task, cases)
     visible_ids = [case.get("case_id") for case in cases if isinstance(case.get("case_id"), int)]
     
+    # We do NOT catch exceptions here so that failures are visible to the validator
+    completion = client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=[
+            {"role": "system", "content": "You are a careful legal triage assistant. Reply with JSON only."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=TEMPERATURE,
+        max_tokens=MAX_TOKENS,
+    )
+    content = (completion.choices[0].message.content or "").strip()
+    
     try:
-        completion = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": "You are a careful legal triage assistant. Reply with JSON only."},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=TEMPERATURE,
-            max_tokens=MAX_TOKENS,
-        )
-        content = (completion.choices[0].message.content or "").strip()
         parsed = json.loads(content)
         case_id = int(parsed.get("case_id"))
         if case_id in visible_ids:
@@ -87,7 +89,7 @@ def get_model_action(client: OpenAI, task: dict[str, Any], cases: list[dict[str,
     except Exception:
         pass
 
-    # Deterministic fallback
+    # Deterministic fallback ONLY if JSON parsing fails, not LLM call
     best_case = max(cases, key=lambda c: (str(c.get("severity", "")).lower() == "high", int(c.get("pending_days", 0))))
     return {"case_id": best_case["case_id"], "priority": "urgent"}
 
@@ -108,7 +110,8 @@ def main() -> None:
     log_start(task=task_id, env=BENCHMARK, model=MODEL_NAME)
 
     try:
-        client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+        # Strict client initialization using mandatory env vars
+        client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY or "missing_key")
         
         reset_payload = _http_json("POST", "/reset", {"task_id": task_id})
         observation = reset_payload.get("observation", {})
@@ -119,6 +122,8 @@ def main() -> None:
 
             task = observation.get("task", {})
             cases = observation.get("cases", [])
+            
+            # This call must succeed via the proxy
             action_payload = get_model_action(client, task, cases)
             
             step_payload = _http_json("POST", "/step", {"action": action_payload})
