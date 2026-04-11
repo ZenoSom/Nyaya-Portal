@@ -4,14 +4,56 @@ import json
 import os
 import urllib.error
 import urllib.request
+from dataclasses import dataclass
 from typing import Any
 
-from openai import OpenAI
+try:
+    from openai import OpenAI
+except ImportError:
+    @dataclass
+    class _Message:
+        content: str | None
+
+    @dataclass
+    class _Choice:
+        message: _Message
+
+    @dataclass
+    class _CompletionResponse:
+        choices: list[_Choice]
+
+    class _Completions:
+        def __init__(self, *, base_url: str, api_key: str) -> None:
+            self._base_url = base_url
+            self._api_key = api_key
+
+        def create(self, **payload: Any) -> _CompletionResponse:
+            request = urllib.request.Request(
+                f"{self._base_url.rstrip('/')}/chat/completions",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "Authorization": f"Bearer {self._api_key}",
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=60) as response:
+                data = json.loads(response.read().decode("utf-8"))
+            content = data.get("choices", [{}])[0].get("message", {}).get("content")
+            return _CompletionResponse(choices=[_Choice(message=_Message(content=content))])
+
+    class _Chat:
+        def __init__(self, *, base_url: str, api_key: str) -> None:
+            self.completions = _Completions(base_url=base_url, api_key=api_key)
+
+    class OpenAI:
+        def __init__(self, *, base_url: str, api_key: str) -> None:
+            self.chat = _Chat(base_url=base_url, api_key=api_key)
 
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY", "")
+API_KEY = os.getenv("API_KEY")
 ENV_BASE_URL = os.getenv("ENV_BASE_URL", "http://localhost:8000")
 TASK_NAME = os.getenv("NYAYA_TASK", "easy_case_lookup")
 BENCHMARK = os.getenv("NYAYA_BENCHMARK", "nyaya_portal")
@@ -91,7 +133,9 @@ def _extract_action(content: str, cases: list[dict[str, Any]]) -> dict[str, Any]
     return {"case_id": best_case["case_id"], "priority": "urgent"}
 
 
-def get_model_action(client: OpenAI, task: dict[str, Any], cases: list[dict[str, Any]]) -> dict[str, Any]:
+def get_model_action(client: OpenAI | None, task: dict[str, Any], cases: list[dict[str, Any]]) -> dict[str, Any]:
+    if client is None:
+        return _extract_action("", cases)
     prompt = _task_prompt(task, cases)
     try:
         completion = client.chat.completions.create(
@@ -135,7 +179,14 @@ def resolve_task_name() -> str:
 
 
 def main() -> None:
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    client: OpenAI | None
+    if not API_BASE_URL or not API_KEY:
+        client = None
+    else:
+        try:
+            client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+        except Exception:
+            client = None
     task_name = resolve_task_name()
     rewards: list[float] = []
     steps_taken = 0
